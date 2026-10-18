@@ -34,11 +34,25 @@ public class AdvancedSchemePackMod extends Mod {
 
     private void reloadSchematics(String mode) {
         try {
+            // 1. НАДЕЖНАЯ ОЧИСТКА ПАМЯТИ
+            // Удаляем старые схемы мода из главного списка игры
+            Seq<Schematic> allSchems = Vars.schematics.all();
+            if (allSchems != null) {
+                for (int i = allSchems.size - 1; i >= 0; i--) {
+                    Schematic s = allSchems.get(i);
+                    if (s.tags != null && "true".equals(s.tags.get("kernelit-mod-managed"))) {
+                        allSchems.remove(i);
+                    }
+                }
+            }
+
+            // Очищаем кэш стартовых схем (схем запуска ядра)
             ObjectMap<CoreBlock, Seq<Schematic>> loadouts = Vars.schematics.getLoadouts();
             if (loadouts != null) {
                 loadouts.clear();
             }
 
+            // Перезагружаем базовые схемы игрока с диска (это также восстановит легальные loadouts игрока)
             Vars.schematics.load();
         } catch (Exception e) {
             Log.err("[AdvancedSchemePack] Ошибка при сбросе схем: " + e.getMessage());
@@ -57,6 +71,8 @@ public class AdvancedSchemePackMod extends Mod {
                 try {
                     Schematic schem = Schematics.read(file);
                     if (schem.tags == null) schem.tags = new StringMap();
+                    
+                    // Помечаем схему маркером мода
                     schem.tags.put("kernelit-mod-managed", "true");
                     
                     if(!schem.tags.containsKey("name") || schem.tags.get("name").isEmpty()){
@@ -70,6 +86,7 @@ public class AdvancedSchemePackMod extends Mod {
             }
         }
 
+        // Натуральная сортировка (1, 9.1, =10)
         tempSchems.sort((s1, s2) -> {
             String str1 = s1.name().toLowerCase().replace("=", "").replaceAll("\\s+", " ").trim();
             String str2 = s2.name().toLowerCase().replace("=", "").replaceAll("\\s+", " ").trim();
@@ -110,9 +127,26 @@ public class AdvancedSchemePackMod extends Mod {
             return Integer.compare(str1.length(), str2.length());
         });
 
+        // 2. БЕЗОПАСНОЕ ДОБАВЛЕНИЕ В ПАМЯТЬ БЕЗ ЗАПИСИ НА ДИСК
         for (Schematic schem : tempSchems) {
-            Vars.schematics.add(schem);
+            // Добавляем в общий список отображения
+            Vars.schematics.all().add(schem);
+            
+            // Если схема содержит блок ядра, вручную регистрируем её в кэш запуска секторов
+            if (schem.hasCore() && Vars.schematics.getLoadouts() != null) {
+                // Ищем плитку (tile) с ядром внутри схемы
+                mindustry.game.Schematic.Stile coreTile = schem.tiles.find(t -> t.block instanceof CoreBlock);
+                if (coreTile != null) {
+                    CoreBlock block = (CoreBlock) coreTile.block;
+                    if (!Vars.schematics.getLoadouts().containsKey(block)) {
+                        Vars.schematics.getLoadouts().put(block, new Seq<>());
+                    }
+                    Vars.schematics.getLoadouts().get(block).add(schem);
+                }
+            }
         }
+        
+        Log.info("[AdvancedSchemePack] Режим [" + mode + "] успешно внедрен в память. Загружено: " + tempSchems.size);
     }
 
     private void refreshSchematicsDialog() {
