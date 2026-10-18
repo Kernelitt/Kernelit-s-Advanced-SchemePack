@@ -11,6 +11,8 @@ import mindustry.game.Schematic;
 import mindustry.game.Schematics;
 import mindustry.mod.Mod;
 import mindustry.mod.Mods.LoadedMod;
+import arc.struct.ObjectMap;
+import mindustry.world.blocks.storage.CoreBlock;
 
 import java.lang.reflect.Method;
 
@@ -32,6 +34,11 @@ public class AdvancedSchemePackMod extends Mod {
 
     private void reloadSchematics(String mode) {
         try {
+            ObjectMap<CoreBlock, Seq<Schematic>> loadouts = Vars.schematics.getLoadouts();
+            if (loadouts != null) {
+                loadouts.clear();
+            }
+
             Vars.schematics.load();
         } catch (Exception e) {
             Log.err("[AdvancedSchemePack] Ошибка при сбросе схем: " + e.getMessage());
@@ -49,6 +56,8 @@ public class AdvancedSchemePackMod extends Mod {
             if (file.extEquals("msav") || file.extEquals("msch")) {
                 try {
                     Schematic schem = Schematics.read(file);
+                    if (schem.tags == null) schem.tags = new StringMap();
+                    schem.tags.put("kernelit-mod-managed", "true");
                     
                     if(!schem.tags.containsKey("name") || schem.tags.get("name").isEmpty()){
                         schem.tags.put("name", file.nameWithoutExtension());
@@ -61,7 +70,6 @@ public class AdvancedSchemePackMod extends Mod {
             }
         }
 
-        // 1. Натуральная сортировка самих схем (1, 9.1, =10)
         tempSchems.sort((s1, s2) -> {
             String str1 = s1.name().toLowerCase().replace("=", "").replaceAll("\\s+", " ").trim();
             String str2 = s2.name().toLowerCase().replace("=", "").replaceAll("\\s+", " ").trim();
@@ -102,7 +110,9 @@ public class AdvancedSchemePackMod extends Mod {
             return Integer.compare(str1.length(), str2.length());
         });
 
-        Vars.schematics.all().addAll(tempSchems);
+        for (Schematic schem : tempSchems) {
+            Vars.schematics.add(schem);
+        }
     }
 
     private void refreshSchematicsDialog() {
