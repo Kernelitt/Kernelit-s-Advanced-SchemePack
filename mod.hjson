@@ -11,10 +11,10 @@ author: "Kernelit"
 main: "kernelit.AdvancedSchemePackMod"
 
 #the mod description as seen in the mod dialog
-description: "Динамический схемпак для кампании и пвп. Тестовая версия. Много схем взяты с сервера, и ещё не под всё они найдутся. 216 схем на текущий момент"
+description: "Динамический схемпак для кампании и пвп. Тестовая версия. Много схем взяты с сервера, и ещё не под всё они найдутся. ~270 схем на текущий момент"
 
 #the mod version
-version: 1.2
+version: 1.3
 
 #the minimum game build required to run this mod
 minGameVersion: 158
